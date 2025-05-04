@@ -59,6 +59,10 @@ install_go_tools() {
     echo -e "${YELLOW}[*] Installing bxss...${RESET}"
     go install -v github.com/ethicalhackingplayground/bxss@latest
     
+    # Create symbolic links for Go binaries
+    echo -e "${YELLOW}[*] Creating symbolic links for Go binaries...${RESET}"
+    sudo ln -sf "$(go env GOPATH)/bin/"* /usr/local/bin/
+    
     echo -e "${GREEN}[+] Go tools installation completed.${RESET}"
 }
 
