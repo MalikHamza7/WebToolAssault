@@ -41,8 +41,8 @@ install_go_tools() {
     echo -e "${YELLOW}[*] Installing subfinder...${RESET}"
     go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
     
-    echo -e "${YELLOW}[*] Installing httpx...${RESET}"
-    go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+    echo -e "${YELLOW}[*] Installing httprobe...${RESET}"
+    go install -v github.com/tomnomnom/httprobe@latest
     
     echo -e "${YELLOW}[*] Installing katana...${RESET}"
     go install -v github.com/projectdiscovery/katana/cmd/katana@latest
