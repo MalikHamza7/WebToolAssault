@@ -1,4 +1,5 @@
-# Web Penetration Testing Toolkit by Hamza
+# WebToolAssault
+# Web Penetration Testing Toolkit
 
 A comprehensive, interactive web penetration testing toolkit that guides users through a sequential penetration testing workflow with options to save results at each step.
 
@@ -34,7 +35,7 @@ The toolkit depends on the following tools. Make sure to install them before usi
 - [bxss](https://github.com/ethicalhackingplayground/bxss)
 - [corsy.py](https://github.com/s0md3v/Corsy)
 - [openredirex](https://github.com/devanshbatham/openredirex)
-
+You Can Also Install all the Prerequisites using ./install_dependencies.sh But Make Sure Go Is Installed
 ### Installation of Prerequisites
 
 ```bash
@@ -111,6 +112,11 @@ At each step, you can choose to:
 ## 📁 Output
 
 Results are stored in a directory named `results_[domain]`, with each command's output in a separate file.
+![12222](https://github.com/user-attachments/assets/80f5e0ba-7c2b-4e16-9fa0-477e10fa0928)
+![2222333](https://github.com/user-attachments/assets/bf1cb24e-c72e-4dd6-b9d5-26bafb782470)
+![1u223](https://github.com/user-attachments/assets/be0029bf-cb0a-43c1-8e15-4aa193aa5819)
+
+
 
 ## 🤝 Contributing
 
