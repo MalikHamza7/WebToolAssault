@@ -35,7 +35,8 @@ The toolkit depends on the following tools. Make sure to install them before usi
 - [bxss](https://github.com/ethicalhackingplayground/bxss)
 - [corsy.py](https://github.com/s0md3v/Corsy)
 - [openredirex](https://github.com/devanshbatham/openredirex)
-You Can Also Install all the Prerequisites using ./install_dependencies.sh But Make Sure Go Is Installed
+
+- You Can Also Install all the Prerequisites using ./install_dependencies.sh But Make Sure Just Go Is Installed Then Run This Bash Script Its Automate All The Process And Install All The Prerequisites 
 ### Installation of Prerequisites
 
 ```bash
